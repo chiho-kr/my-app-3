@@ -1,0 +1,15 @@
+# Python 3.14 에서 확인한 버전 (2026-10)
+pandas==3.0.6
+numpy==2.5.3
+geopandas==1.2.0
+shapely==2.2.0
+pyproj==3.8.0
+pyogrio==0.13.0
+scipy==1.18.1
+pyarrow==26.0.0
+requests==2.34.2
+truststore==0.10.5      # e-gen.or.kr 인증서 검증 (OS 인증서 저장소)
+osmium==4.3.2           # pyosmium: OSM 자르기·MOTIS용 노드 쪼개기
+
+# 검증용 (transit/r5/) — Java 21 필요
+r5py==1.1.7

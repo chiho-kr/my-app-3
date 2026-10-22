@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>서울 심야 약국 지도</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%230b1020%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%276%27 fill=%27%23ffc35a%27/%3E%3C/svg%3E">
+<meta name="description" content="평일 저녁부터 새벽까지, 서울 어디서든 지금 문 연 약국까지 대중교통과 도보로 몇 분 걸리는지 1분 단위로 보여주는 지도.">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: 화면 전체가 밤의 서울 지도, 왼쪽 위에 시계·슬라이더·범례를 담은 한 장의 패널 (휴대폰에선 아래쪽 시트) */
+:root {
+  color-scheme: dark;
+  --night: #0b1020;          /* 바탕 */
+  --panel: rgba(13, 19, 38, 0.86);
+  --ink: #e8ecf7;            /* 본문 */
+  --dim: #8d97b5;            /* 보조 */
+  --rule: rgba(141, 151, 181, 0.22);
+  --lamp: #ffc35a;           /* 영업 중인 약국 불빛 */
+  --b1: #d4f7e6; --b2: #6fd6c2; --b3: #2f9cc8; --b4: #3e5cb8; --b5: #3b2c7a;  /* 등시간 띠 3·5·10·15·30분: 가까울수록 밝게 */
+  --display: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+html, body { height: 100%; margin: 0; }
+body { background: var(--night); color: var(--ink); font: 14px/1.5 var(--body); }
+#map { position: fixed; inset: 0; }
+.panel {
+  position: fixed; z-index: 2;
+  top: calc(16px + env(safe-area-inset-top, 0px)); left: calc(16px + env(safe-area-inset-left, 0px));
+  width: min(360px, calc(100vw - 32px));
+  background: var(--panel); backdrop-filter: blur(10px);
+  border: 1px solid var(--rule); border-radius: 14px;
+  padding: 18px 18px 14px; display: grid; gap: 14px;
+}
+h1 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0.01em; text-wrap: balance; }
+.sub { margin: 2px 0 0; color: var(--dim); font-size: 12.5px; }
+.clock { display: flex; align-items: baseline; gap: 10px; }
+.clock button { margin-left: auto; align-self: center; }
+.clock .t { font: 700 52px/1 var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.clock .d { color: var(--dim); font-size: 12px; }
+.row { display: flex; align-items: center; gap: 10px; }
+button {
+  font: 500 13px var(--body); color: var(--night); background: var(--lamp);
+  border: 0; border-radius: 999px; height: 32px; padding: 0 14px; cursor: pointer; flex: none;
+}
+button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+/* 시간 막대: 슬라이더와 그래프를 같은 폭으로 겹쳐 맞춘다. 손잡이 지름 14px → 양끝 7px 안쪽이 18:00·06:00 */
+.timebar { display: grid; gap: 4px; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; margin: 0; background: transparent; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--rule); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--rule); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: var(--lamp); border: 0; }
+input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--lamp); border: 0; }
+.ticks { display: flex; justify-content: space-between; color: var(--dim); font: 500 11px var(--display); padding: 0 1px; }
+.legend { display: grid; gap: 6px; }
+.band { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center; font-size: 12.5px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; }
+.band .v { font: 500 12px var(--display); font-variant-numeric: tabular-nums; color: var(--ink); }
+.band .k { color: var(--dim); }
+.lamps { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--dim); }
+.lamps b { color: var(--lamp); font: 700 13px var(--display); }
+.routes { border: 0; border-top: 1px solid var(--rule); margin: 0; padding: 10px 0 0; display: grid; gap: 8px; min-width: 0; }
+.routes legend { padding: 0; font-size: 12.5px; color: var(--ink); display: contents; }
+.routes .cnt { color: var(--dim); font-size: 12px; margin-left: 6px; }
+.routes .cnt b { color: var(--ink); font: 700 12.5px var(--display); font-variant-numeric: tabular-nums; }
+.rt-row { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--dim); }
+.rt-row label, .emph-switch { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.routes input { accent-color: var(--lamp); margin: 0; }
+.rsw { display: inline-block; width: 16px; height: 3px; border-radius: 2px; }
+.rsw.rail { height: 5px; border-radius: 1px; background: repeating-linear-gradient(90deg, var(--night) 0 3px, #c9cfdf 3px 6px); box-shadow: 0 0 0 1.5px #c9cfdf inset; }
+.rsw.city { background: #8d97b5; }
+.rsw.night { height: 3px; background: #e8ecf7; }
+.rsw.express { background: #8d97b5; opacity: .35; }
+body.emph .rsw.express { background: hsl(355, 55%, 50%); opacity: .75; }
+body.emph .rsw.rail { background:
+  repeating-linear-gradient(90deg, var(--night) 0 3px, transparent 3px 6px),
+  linear-gradient(90deg, hsl(212,55%,50%), hsl(144,55%,50%), hsl(27,49%,52%), hsl(196,55%,50%));
+  box-shadow: none; }
+body.emph .rsw.city { height: 4px; background: linear-gradient(90deg, hsl(225,26%,50%) 0 25%, hsl(98,35%,50%) 25% 50%, hsl(44,50%,50%) 50% 75%, hsl(137,10%,50%) 75%); }
+body.emph .rsw.night { height: 4px; background: #fff; }
+.emph-switch { font-size: 12.5px; color: var(--ink); }
+.emph-switch .hint { color: var(--dim); font-size: 11px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 8px var(--lamp); }
+#chart { width: 100%; height: 78px; display: block; cursor: ew-resize; touch-action: none; }
+.note { color: var(--dim); font-size: 11.5px; line-height: 1.5; border-top: 1px solid var(--rule); padding-top: 10px; }
+.note summary { cursor: pointer; color: var(--ink); }
+.tip {
+  position: fixed; z-index: 3; pointer-events: none; background: var(--panel); border: 1px solid var(--rule);
+  border-radius: 8px; padding: 6px 9px; font-size: 12px; white-space: nowrap;
+}
+.tip b { font: 700 13px var(--display); }
+/* 선택 팝업 (클릭한 칸·노선) */
+.sel-pop .maplibregl-popup-content { background: var(--panel); color: var(--ink); border: 1px solid var(--rule); border-radius: 10px;
+  padding: 10px 26px 10px 12px; font: 12.5px/1.45 var(--body); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45); }
+.sel-pop .maplibregl-popup-tip { border-top-color: var(--panel); border-bottom-color: var(--panel); }
+.sel-pop .maplibregl-popup-close-button { color: var(--dim); font-size: 16px; right: 4px; top: 2px; }
+.sel-pop .pop-t { color: var(--dim); font-size: 11.5px; display: flex; align-items: center; gap: 6px; }
+.sel-pop .pop-t .rsw { width: 16px; }
+.sel-pop .pop-v b { font: 700 18px var(--display); color: var(--lamp); }
+.sel-pop .pop-n { margin-top: 4px; color: var(--dim); }
+.sel-pop .pop-n b { color: var(--ink); }
+.sel-pop .pop-x { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--rule); color: var(--dim); font-size: 11.5px; }
+.sel-pop .pop-x b { color: var(--ink); font-weight: 500; }
+.sel-pop .picks { list-style: none; margin: 6px 0 0; padding: 0; max-height: 220px; overflow-y: auto; display: grid; gap: 2px; }
+.sel-pop .pick { width: 100%; display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 8px;
+  background: transparent; color: var(--ink); border: 0; border-radius: 6px; height: auto; padding: 5px 6px; text-align: left; cursor: pointer;
+  font: 12.5px var(--body); }
+.sel-pop .pick:hover, .sel-pop .pick:focus-visible { background: rgba(255, 195, 90, 0.14); outline: none; }
+.sel-pop .pick .pn { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sel-pop .pick .pk { color: var(--dim); font-size: 11.5px; white-space: nowrap; }
+.status { color: var(--dim); font-size: 11.5px; }
+@media (max-width: 560px) {
+  .panel { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: max(12px, env(safe-area-inset-left, 0px));
+           width: auto; right: max(12px, env(safe-area-inset-right, 0px)); padding: 14px; gap: 10px; }
+  .clock .t { font-size: 40px; }
+  #chart, .note { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .dot { box-shadow: none; } }
+</style>
+</head>
+<body>
+<div id="map" aria-label="서울 지도"></div>
+
+<section class="panel" aria-label="시간 조절과 범례">
+  <div>
+    <h1>지금 문 연 약국까지, 몇 분?</h1>
+    <p class="sub">평일 저녁 6시부터 다음 날 아침 6시까지 · 대중교통+도보</p>
+  </div>
+  <div class="clock"><span class="t" id="clock">18:00</span><span class="d" id="daylabel">수요일</span>
+    <button id="play" type="button" aria-pressed="false">재생</button></div>
+  <div class="timebar">
+    <input id="slider" type="range" min="0" max="720" step="1" value="0" aria-label="시각 (18:00부터 분)">
+    <div class="ticks" aria-hidden="true"><span>18</span><span>21</span><span>00</span><span>03</span><span>06</span></div>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div class="lamps"><span class="dot"></span>영업 중인 약국 <b id="nopen">–</b>곳 (서울)</div>
+  <fieldset class="routes">
+    <legend>노선 <span class="cnt">운행 중 <b id="nroutes">–</b>개</span></legend>
+    <div class="rt-row">
+      <label><input type="checkbox" id="rt-rail" checked><i class="rsw rail"></i>전철</label>
+      <label><input type="checkbox" id="rt-city" checked><i class="rsw city"></i>시내버스</label>
+      <label><input type="checkbox" id="rt-night" checked><i class="rsw night"></i>심야(N)</label>
+      <label><input type="checkbox" id="rt-express"><i class="rsw express"></i>광역·공항</label>
+    </div>
+    <label class="emph-switch"><input type="checkbox" id="rt-emph" role="switch"> 교통망 강조 <span class="hint">노선색으로 앞에 · 노선을 누르면 이름 표시</span></label>
+  </fieldset>
+  <canvas id="chart" aria-label="시각별 서울 면적 중 각 소요시간 안에 드는 비율. 드래그해서 시각을 바꿀 수 있음"></canvas>
+  <details class="note">
+    <summary>어떻게 계산했나</summary>
+    <p>서울을 250m 격자로 나누고, 각 격자에서 그 시각 정각에 출발해 <strong>도착했을 때 문을 연</strong> 가장 가까운 약국까지
+    대중교통과 걷기로 걸리는 시간을 MOTIS로 10분마다 계산했습니다. 그 사이 시각은 앞뒤 결과를 보간합니다.
+    약국 영업시간은 E-Gen(국립중앙의료원, 2026년 10월), 대중교통은 KTDB GTFS(2025년 3월 평일 시간표), 도로망은 OpenStreetMap입니다.
+    띠는 생활SOC 기준으로 3·5·10·15·30분이고, 30분 넘게 걸리는 곳은 옅은 회색입니다. 3분 띠는 250m 격자(걸어서 약 3분) 해상도에 가까워 거칠게 보일 수 있습니다. 영업시간은 약국이 신고한 값이라 실제와 다를 수 있습니다.</p>
+  </details>
+  <div class="status" id="status" aria-live="polite">데이터 불러오는 중…</div>
+</section>
+<div class="tip" id="tip" hidden></div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-contour@4.0.2/dist/d3-contour.min.js"></script>
+<script src="app.js?v=32"></script>
+</body>
+</html>

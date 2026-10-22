@@ -1,0 +1,8 @@
+# 원자료와 가공 데이터는 용량이 커서 저장소에 넣지 않는다 (README의 '데이터 받기' 참고)
+/raw/
+/data/
+__pycache__/
+*.pyc
+.ruff_cache/
+
+# web/data/ 는 사이트를 그대로 띄울 수 있게 저장소에 포함한다 (transit.pack_web / transit.export_routes 로 다시 만들 수 있음)

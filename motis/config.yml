@@ -1,0 +1,42 @@
+osm: capital_motis.osm.pbf
+timetable:
+  first_day: 2026-10-26
+  num_days: 14
+  tb: false
+  railviz: true
+  with_shapes: true
+  route_shapes:            # KTDB GTFS에 shapes.txt가 없어 OSM으로 노선 궤적 계산
+    mode: missing
+    clasz:
+      COACH: false         # 시외·고속버스는 장거리라 느림 → 직선 유지
+  adjust_footpaths: true
+  merge_dupes_intra_src: false
+  merge_dupes_inter_src: false
+  link_stop_distance: 100
+  update_interval: 60
+  http_timeout: 30
+  canned_rt: false
+  incremental_rt_update: false
+  extend_missing_footpaths: false
+  max_footpath_length: 15
+  default_transfer_time: 2
+  max_matching_distance: 25.000000
+  preprocess_max_matching_distance: 250.000000
+  datasets:
+    ktdbgtfs:
+      path: ktdb.gtfs.zip
+      extend_calendar: false
+      default_bikes_allowed: false
+      default_cars_allowed: false
+      default_reservation_not_required: true
+      clasz_reservation_not_required:
+        AIR: false
+        COACH: false
+        NIGHT: false
+        ODM: false
+        RIDESHARING: false
+elevators: false
+street_routing: true
+osr_footpath: false
+geocoding: false
+reverse_geocoding: false
