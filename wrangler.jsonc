@@ -1,0 +1,10 @@
+// Cloudflare 정적 발행: web/ 폴더를 그대로 올린다 (서버 코드 없음).
+//   npx wrangler deploy
+{
+  "name": "my-app-3",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./web",
+    "not_found_handling": "404-page"
+  }
+}

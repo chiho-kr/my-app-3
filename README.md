@@ -1,5 +1,7 @@
 # 서울 심야 약국 접근성
 
+라이브: https://my-app-3.chiho-kang.workers.dev
+
 평일 저녁 6시부터 다음 날 아침 6시까지, 서울 250m 격자마다 **지금 문 연 가장 가까운 약국까지 대중교통+도보로 몇 분**인지 10분 간격으로 계산하고, 1분 단위 슬라이더 지도(`web/`)로 보여준다.
 
 - 약국 영업시간: E-Gen(국립중앙의료원 응급의료포털) 약국 찾기, 2026-10 수집
@@ -98,6 +100,15 @@ python -m pharmacy.egen_build --ref-date 2026-10-26      # crosscheck_p114.csv �
 python -m transit.r5.smoke_test                          # R5 동작 확인
 python -m transit.r5.compare_wrap                        # 자정 넘김 처리 검증
 python -m transit.r5.compute_access_r5 --part 0 --nparts 2   # R5판 접근성 (느림)
+```
+
+## 발행 (Cloudflare, 정적)
+
+`web/` 폴더만 정적 자산으로 올린다 (서버 코드 없음, 설정: `wrangler.jsonc`).
+
+```
+npx wrangler login
+npx wrangler deploy
 ```
 
 ## 지표 정의
