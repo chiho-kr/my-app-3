@@ -86,7 +86,9 @@ th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: ri
 th { font-weight: 500; color: var(--ink2); font-size: 13px; vertical-align: bottom; }
 th:first-child, td:first-child, .tl { text-align: left; }
 .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.formula { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 14px; background: var(--sunk); border-radius: 8px; padding: 10px 14px; overflow-x: auto; white-space: nowrap; }
+.formula { background: var(--sunk); border-radius: 8px; padding: 4px 14px; overflow-x: auto; overflow-y: hidden; }
+.formula .katex-display { margin: .6em 0; }
+.katex { font-size: 1.08em; }
 .ind { border-top: 1px solid var(--line); padding: 18px 0; display: grid; grid-template-columns: 200px 1fr; gap: 16px; }
 .ind h4 { margin: 0; font-size: 16px; }
 .ind .tag { font-size: 12px; color: var(--ink3); }
@@ -123,6 +125,7 @@ footer { margin: 80px 0 0; padding: 24px 0 48px; border-top: 1px solid var(--lin
   header.top .wrap { height: auto; padding-top: 10px; padding-bottom: 10px; flex-direction: column; align-items: flex-start; gap: 4px; }
 }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 </head>
 <body>
 <header class="top"><div class="wrap">
@@ -172,32 +175,33 @@ footer { margin: 80px 0 0; padding: 24px 0 48px; border-top: 1px solid var(--lin
   <div class="prose">
   <h3>이동시간 계산</h3>
   <p>각 격자 중심에서 출발 시각 t에 대중교통과 도보로 갈 수 있는 모든 정류장을 MOTIS로 구하고(최대 60분), 정류장에서 약국까지 걷는 시간을 더했다. 걸어서 바로 가는 경우도 함께 비교해 더 빠른 쪽을 택했다. 약국은 <b>도착 시각에 영업 중</b>이어야 셈에 넣는다. 그래서 가까운 약국이 도착 전에 닫으면 더 먼 약국이 답이 된다.</p>
-  <div class="formula">T_c(t) = min_j { 이동시간(c→j, 출발 t) : 약국 j가 도착 시각에 영업 중 },  60분 초과는 '60분+'</div>
+  <div class="formula">\[ T_c(t) = \min_{j} \left\{ \tau_{cj}(t) \;:\; O_j\big(t + \tau_{cj}(t)\big) = 1 \right\}, \qquad T_c(t) > 60 \Rightarrow 60^{+} \]</div>
+  <p class="small">\(\tau_{cj}(t)\): 격자 \(c\)에서 시각 \(t\)에 출발해 약국 \(j\)에 도착하기까지 걸리는 시간(대중교통+도보, 분). 도착 시각 \(t+\tau\)에 영업 중인 약국만 후보가 된다.</p>
   <p class="small">검증: 같은 입력으로 R5(r5py)를 돌려 비교했을 때 중앙값 차이 +1분, 90%가 ±5분 이내였다.</p>
   </div>
 </section>
 
 <section id="ind">
   <div class="prose"><h2><span class="no">03</span>지표 정의와 계산식</h2>
-  <p>수업 지표 세 가지(밀도, 입지계수, 중력 접근성)에 직접 설계한 지표 하나(심야 공백 시간)를 더했다. O<sub>j</sub>(t)는 약국 j가 시각 t에 영업 중이면 1, 아니면 0이다. 시점은 20:00·22:00·00:00·02:00을 기본으로 본다.</p></div>
+  <p>수업 지표 세 가지(밀도, 입지계수, 중력 접근성)에 직접 설계한 지표 하나(심야 공백 시간)를 더했다. \(O_j(t)\)는 약국 \(j\)가 시각 \(t\)에 영업 중이면 1, 아니면 0이다. \(C_i\)는 동 \(i\)에 속한 격자 집합이다. 시점은 20:00·22:00·00:00·02:00을 기본으로 본다.</p></div>
 
   <div class="ind"><div><h4>① 밀도 D</h4><div class="tag">수업 지표 · 동 안 공급</div></div><div>
-    <div class="formula">D_i(t) = Σ_{j∈i} O_j(t) / Pop_i × 10,000</div>
-    <p>인구 1만 명당 그 시각 문 연 약국 수. 동 경계 안의 약국만 센다. 인구는 주민등록 총인구.</p></div></div>
+    <div class="formula">\[ D_i(t) = \frac{\sum_{j \in i} O_j(t)}{P_i} \times 10{,}000 \]</div>
+    <p>인구 1만 명당 그 시각 문 연 약국 수. \(j \in i\)는 동 경계 안의 약국만 센다는 뜻이다. \(P_i\)는 주민등록 총인구.</p></div></div>
 
   <div class="ind"><div><h4>② 특화도 LQ</h4><div class="tag">수업 지표 · 밤 영업 비중</div></div><div>
-    <div class="formula">LQ_i(t) = (N_i(t) / N_i) ÷ (N(t) / N)</div>
-    <p>N<sub>i</sub>는 동 안의 전체 약국 수, N<sub>i</sub>(t)는 그중 시각 t에 영업 중인 수, N과 N(t)는 서울 전체. 1보다 크면 그 동 약국들이 서울 평균보다 밤늦게까지 연다. 약국이 없는 동 2곳은 정의되지 않는다.</p></div></div>
+    <div class="formula">\[ LQ_i(t) = \frac{N_i(t) \,/\, N_i}{N(t) \,/\, N} \]</div>
+    <p>\(N_i\)는 동 안의 전체 약국 수, \(N_i(t)\)는 그중 시각 \(t\)에 영업 중인 수, \(N\)과 \(N(t)\)는 서울 전체. 1보다 크면 그 동 약국들이 서울 평균보다 밤늦게까지 연다. 약국이 없는 동 2곳은 정의되지 않는다.</p></div></div>
 
   <div class="ind"><div><h4>③ 중력 접근성 G</h4><div class="tag">수업 지표 · 거리로 할인한 선택지</div></div><div>
-    <div class="formula">G_i(t) = mean_{c∈i} Σ_j O_j(t) · 0.5^(d_cj / 800m),  d_cj ≤ 4km</div>
-    <p>격자 중심 c에서 직선거리 d로 할인한 영업 약국 수를 동 안 격자로 평균했다. 800m(도보 약 10분)마다 가치가 절반이 된다. 동 경계와 서울 경계를 넘는 약국도 포함한다. 단위는 '거리 가중 약국 수'다.</p>
-    <div class="formula">R_i(t) = G_i(t) / G⁰_i  (G⁰ = 모든 약국이 문을 연다고 가정한 G)</div>
-    <p><b>유지율 R</b>은 입지 효과를 덜어 내고 영업시간 효과만 본다. 낮 기준 잠재 선택지 중 시각 t에 몇 %가 남는지다.</p></div></div>
+    <div class="formula">\[ G_i(t) = \frac{1}{|C_i|} \sum_{c \in C_i} \; \sum_{j \,:\, d_{cj} \le 4\,\mathrm{km}} O_j(t) \cdot 0.5^{\,d_{cj} / 800\,\mathrm{m}} \]</div>
+    <p>격자 중심 \(c\)에서 약국 \(j\)까지의 직선거리 \(d_{cj}\)로 할인한 영업 약국 수를 동 안 격자로 평균했다. 800m(도보 약 10분)마다 가치가 절반이 된다. 동 경계와 서울 경계를 넘는 약국도 포함한다. 단위는 '거리 가중 약국 수'다.</p>
+    <div class="formula">\[ R_i(t) = \frac{G_i(t)}{G_i^{0}}, \qquad G_i^{0} = G_i(t)\Big|_{O_j \equiv 1} \]</div>
+    <p>\(G_i^{0}\)는 모든 약국이 문을 연다고 가정한 중력 접근성이다. <b>유지율 \(R\)</b>은 입지 효과를 덜어 내고 영업시간 효과만 본다. 낮 기준 잠재 선택지 중 시각 t에 몇 %가 남는지다.</p></div></div>
 
   <div class="ind"><div><h4>④ 심야 공백 시간 H</h4><div class="tag">직접 설계 · 시간 축 접근성</div></div><div>
-    <div class="formula">H_i = mean_{c∈i} Σ_{t=18:00}^{06:00} 1[T_c(t) &gt; 30분] × 10분</div>
-    <p>대중교통+도보 30분 안에 문 연 약국에 닿지 못하는 밤 시간의 길이(시간). 73개 시점이라 최대 12시간이다. 한 시점의 거리 대신 '밤새 얼마나 오래 끊기는가'를 잰다. 실제 이동 경로, 배차 간격, 막차, 약국 마감을 모두 반영하는 유일한 지표다. 30분은 생활SOC 기준 도보권의 상한으로 잡았다.</p></div></div>
+    <div class="formula">\[ H_i = \frac{1}{|C_i|} \sum_{c \in C_i} \; \sum_{k=0}^{72} \mathbf{1}\big[\, T_c(t_k) > 30 \,\big] \cdot \frac{10}{60}, \qquad t_k = \text{18:00} + 10k\ \text{분} \]</div>
+    <p>대중교통+도보 30분 안에 문 연 약국에 닿지 못하는 밤 시간의 길이(시간). \(\mathbf{1}[\cdot]\)은 조건이 참이면 1인 지시함수, \(T_c(t_k)\)는 위의 최소 이동시간이다. 73개 시점이라 최대 12시간이다. 한 시점의 거리 대신 '밤새 얼마나 오래 끊기는가'를 잰다. 실제 이동 경로, 배차 간격, 막차, 약국 마감을 모두 반영하는 유일한 지표다. 30분은 생활SOC 기준 도보권의 상한으로 잡았다.</p></div></div>
   <p class="small prose">보조 값: 동 안 격자 이동시간 중앙값 T, 30분 안 격자 비율 P30, 65세 이상 인구 비율. 동 값은 격자 평균이므로 면적 가중이고, 동 안의 인구 분포는 반영하지 않는다.</p>
 </section>
 
@@ -315,6 +319,9 @@ footer { margin: 80px 0 0; padding: 24px 0 48px; border-top: 1px solid var(--lin
 <footer><div class="wrap">서울 심야 약국 접근성 · 스마트도시데이터분석 과제 3 · <a href="index.html">시간 슬라이더 지도</a></div></footer>
 <div class="tip" id="tip"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
-<script src="report.js?v=3"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script>renderMathInElement(document.body, { delimiters: [{ left: "\\[", right: "\\]", display: true }, { left: "\\(", right: "\\)", display: false }], strict: false, throwOnError: false });</script>
+<script src="report.js?v=4"></script>
 </body>
 </html>
