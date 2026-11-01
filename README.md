@@ -1,6 +1,6 @@
 # 서울 심야 약국 접근성
 
-라이브: https://my-app-3.chiho-kang.workers.dev
+라이브: https://my-app-3.chiho-kang.workers.dev (지도) · https://my-app-3.chiho-kang.workers.dev/report.html (행정동 분석 보고서)
 
 평일 저녁 6시부터 다음 날 아침 6시까지, 서울 250m 격자마다 **지금 문 연 가장 가까운 약국까지 대중교통+도보로 몇 분**인지 10분 간격으로 계산하고, 1분 단위 슬라이더 지도(`web/`)로 보여준다.
 
@@ -29,9 +29,10 @@ transit/        대중교통·격자·접근성 계산
   motis_walk.py, compute_access.py                           접근성 계산 (MOTIS)
   export_routes.py, pack_web.py                              웹 데이터
   r5/             R5 검증 (compute_access_r5, compare_wrap, smoke_test, r5util)
+dong/           행정동 경계 + 주민등록 인구 (build_dong.py), 행정동 지표 (indicators.py), 보고서 데이터 (report_data.py)
 motis/config.yml  MOTIS 설정 사본 (실제 작업 폴더는 data/motis/)
 tests/          영업시간 파서 테스트
-web/            지도 (index.html, app.js, data/)
+web/            지도 (index.html, app.js), 보고서 (report.html, report.js), data/
 raw/            원자료 (직접 받음, 저장소 제외)
 data/           가공 데이터 (저장소 제외)
 ```
@@ -56,6 +57,8 @@ pip install -r requirements.txt
 | `raw/osm/south-korea-latest.osm.pbf` | Geofabrik |
 | `raw/grid/빈격자(250m).shp` | 국토지리정보원 250m 격자 |
 | `raw/서울시 약국 운영시간  정보.csv` | 서울 열린데이터광장 OA-20402 (교차검증용) |
+| `raw/admdong/HangJeongDong_ver20261001.geojson` | [vuski/admdongkor](https://github.com/vuski/admdongkor) 행정동 경계 (2026-10-01) |
+| `raw/jumin/age_2026_09_emd.csv` | [주민등록 인구통계](https://jumin.mois.go.kr/) 연령별 인구현황, 월간, 전체읍면동현황, 5세 단위, 2026년 9월 (CP949) |
 
 ## 실행 순서
 
@@ -80,7 +83,12 @@ motis.exe server                                         # http://127.0.0.1:8080
 python -m transit.motis_walk                             # 도보표, 약 1분
 python -m transit.compute_access --budget 530            # 73개 시점, 나눠 실행하면 이어서 계산 (전체 약 1시간)
 
-# 5. 웹 데이터
+# 5. 행정동 (경계 + 인구)
+python -m dong.build_dong                                 # → data/dong/dong_seoul.parquet
+python -m dong.indicators                                # → data/dong/dong_indicators.*, web/data/dong.geojson
+python -m dong.report_data                               # → web/data/report.json, gu.geojson (보고서 페이지)
+
+# 6. 웹 데이터
 python -m transit.export_routes                          # → web/data/routes.geojson
 python -m transit.pack_web                               # → web/data/ (frames, meta, pharmacies …)
 
@@ -121,6 +129,25 @@ npx wrangler deploy
 - 걷기만: 칸→약국 도보
 - 지도 띠: 생활SOC 기준 3·5·10·15·30분. 30분 초과는 회색
 
+### 행정동 지표 (`python -m dong.indicators`)
+
+분석 단위는 서울 행정동 427개(2026-10-01 경계), 인구는 주민등록 2026년 9월 말. 시점은 20:00·22:00·00:00·02:00.
+`O_j(t)`는 약국 j가 시각 t에 영업 중이면 1.
+
+| 지표 | 계산식 | 해석 |
+|---|---|---|
+| 밀도 D | 동 안 영업 약국 수(t) ÷ 인구 × 10,000 | 인구 1만 명당 그 시각 문 연 약국 |
+| 특화도 LQ | (N_i(t) / N_i) ÷ (N(t) / N), N_i = 동 안 전체 약국 | 1보다 크면 서울 평균보다 그 시각 영업 비중이 높음. 약국 없는 동은 정의 안 됨 |
+| 중력 접근성 G | 동 안 격자 평균 Σ_j O_j(t) · 0.5^(d/800m), 직선거리 4km까지 | 거리로 할인한 '선택 가능한' 영업 약국 수. 반감 거리 800m ≈ 도보 10분 |
+| 심야 공백 시간 H (직접 설계) | 동 안 격자 평균, 18:00~06:00 73시점 중 T_i(t) > 30분인 시점 수 × 10분 | 대중교통+도보 30분 안에 문 연 약국에 닿지 못하는 밤 시간 길이 |
+| 유지율 R | G(t) ÷ G⁰ (G⁰ = 모든 약국이 연다고 본 G) | 입지 효과를 빼고 영업시간 효과만 본 값 |
+
+민감도: 반감 거리 500·1,200m, 공백 기준 15·45분으로 바꿔 기본값과 순위 상관을 낸다 (`report.json`의 `sens`).
+
+보조로 동 안 격자 소요시간 중앙값 `T`, 30분 안 격자 비율 `P30`, 65세 이상 비율 `old_share`를 함께 낸다.
+격자는 중심점이 들어 있는 동에 붙인다 (서울 격자 10,125칸 중 9,694칸, 나머지는 경계에 걸친 칸). 동 안의 인구 분포는 반영하지 않는다.
+결과: `data/dong/dong_indicators.parquet`·`.csv`, 웹용 `web/data/dong.geojson`.
+
 ## 데이터 판단 근거
 
 **약국 영업시간 출처**
@@ -149,7 +176,7 @@ npx wrangler deploy
 |---|---|---|---|---|
 | 92% | 82% | 11% | 6% | 43% |
 
-06:00에 비율이 회복되는 건 첫차 덕분이다. 영업 약국은 06:00에도 서울에 4곳뿐이다.
+06:00에 비율이 회복되는 건 첫차 덕분이다. 서울 경계 안 영업 약국은 20:00 1,424곳, 22:00 209곳, 00:00 46곳, 02:00 4곳, 06:00 3곳이다 (전체 5,539곳).
 
 ## 한계
 
@@ -175,5 +202,7 @@ npx wrangler deploy
 - 대중교통 시간표: 한국교통연구원 국가교통DB(KTDB) GTFS (2025-03)
 - 노선 궤적·보행망·서울 경계: © OpenStreetMap contributors, [ODbL](https://opendatacommons.org/licenses/odbl/)
 - 분석 격자: 국토지리정보원 국가지점번호 250m 격자
+- 행정동 경계: [vuski/admdongkor](https://github.com/vuski/admdongkor) ver20261001
+- 인구: 행정안전부 주민등록 인구통계 (2026년 9월 말)
 - 배경지도: © CARTO, © OpenStreetMap contributors
 

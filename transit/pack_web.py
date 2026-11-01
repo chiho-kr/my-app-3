@@ -4,7 +4,7 @@ web/data/meta.json        격자 크기·모서리 좌표(MapLibre canvas source
 web/data/frames.bin       uint8 [n_frames][rows*cols] 분 (255 = 60분 초과 또는 격자 밖)
 web/data/nearest.bin      int16 [n_frames][rows*cols] 가장 가까운 영업 약국 index (-1 없음)
 web/data/mask.bin         uint8 [rows*cols] 2=서울 안, 1=경계 밖 버퍼, 0=격자 없음
-web/data/pharmacies.json  [[lon, lat, open_min, close_min, spill_min, name, thu_open, thu_close], …]  (18:00 기준 분, 영업 판정용)
+web/data/pharmacies.json  [[lon, lat, open_min, close_min, spill_min, name, thu_open, thu_close, in_seoul], …]  (18:00 기준 분, 영업 판정용)
 web/data/seoul.geojson    서울 경계
 
 아직 계산되지 않은 시점은 frames에서 빠진다 (meta.times에 있는 시점만).
@@ -18,6 +18,7 @@ import json
 import shutil
 import sys
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 from pyproj import Transformer
@@ -101,8 +102,11 @@ def main() -> None:
 
     rows_ph = load_rows()
     iv = pharmacy_intervals([parse_egen(r) for r in rows_ph])
-    ph = [[round(float(r["LON"]), 6), round(float(r["LAT"]), 6), o, c, s, r.get("TITLE"), o2, c2]
-          for r, (o, c, s, o2, c2) in zip(rows_ph, iv)]
+    seoul = gpd.read_file(SEOUL_BOUNDARY).geometry.iloc[0]
+    lon, lat = (np.array([float(r[k]) for r in rows_ph]) for k in ("LON", "LAT"))
+    in_seoul = gpd.GeoSeries(gpd.points_from_xy(lon, lat), crs=4326).within(seoul).to_numpy()
+    ph = [[round(x, 6), round(y, 6), o, c, s, r.get("TITLE"), o2, c2, int(k)]
+          for r, x, y, k, (o, c, s, o2, c2) in zip(rows_ph, lon, lat, in_seoul, iv)]
     (WEB / "pharmacies.json").write_text(json.dumps(ph, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     shutil.copy(SEOUL_BOUNDARY, WEB / "seoul.geojson")
 

@@ -4,5 +4,6 @@
 __pycache__/
 *.pyc
 .ruff_cache/
+.wrangler/
 
 # web/data/ 는 사이트를 그대로 띄울 수 있게 저장소에 포함한다 (transit.pack_web / transit.export_routes 로 다시 만들 수 있음)

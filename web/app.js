@@ -343,10 +343,9 @@
   }
   let phOpen = null;
   const isOpen = (p, m) => (p[2] != null && p[2] <= m && p[3] > m) || (p[6] != null && p[6] <= m && p[7] > m);
-  const SEOUL_BOX = [126.76, 37.41, 127.19, 37.72];   // 영업 약국 수 집계 범위 (서울 경계 근사)
-  function openCount(m) {
+  function openCount(m) {   // 서울 경계 안 약국만 (p[8])
     let c = 0;
-    for (const p of ph) if (isOpen(p, m) && p[0] >= SEOUL_BOX[0] && p[0] <= SEOUL_BOX[2] && p[1] >= SEOUL_BOX[1] && p[1] <= SEOUL_BOX[3]) c++;
+    for (const p of ph) if (p[8] && isOpen(p, m)) c++;
     return c;
   }
 

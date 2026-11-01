@@ -10,6 +10,8 @@ RAW_GTFS = RAW / "GTFS" / "202503_GTFS_DataSet"     # KTDB 전국 GTFS (2025-03)
 RAW_OSM = RAW / "osm" / "south-korea-latest.osm.pbf"  # Geofabrik
 RAW_GRID = RAW / "grid" / "빈격자(250m).shp"          # 국토지리정보원 국가지점번호 250m 격자
 RAW_SEOUL_CSV = RAW / "서울시 약국 운영시간  정보.csv"  # 서울 열린데이터 OA-20402
+RAW_DONG = RAW / "admdong" / "HangJeongDong_ver20261001.geojson"  # 행정동 경계 (github.com/vuski/admdongkor)
+RAW_POP = RAW / "jumin" / "age_2026_09_emd.csv"     # 주민등록 연령별 인구, 읍면동, 2026-09 말 (jumin.mois.go.kr)
 
 # ---- 가공 데이터
 DATA = ROOT / "data"
@@ -36,6 +38,8 @@ ACCESS_R5 = TRANSIT / "access_250m"                 # R5 검증 결과 (5분 간
 MOTIS_DIR = DATA / "motis"                          # MOTIS 작업 폴더 (config.yml, data/)
 MOTIS_FEED = MOTIS_DIR / "ktdb.gtfs.zip"            # MOTIS가 읽는 GTFS (자정 넘김 사본 없음)
 MOTIS_OSM = MOTIS_DIR / "capital_motis.osm.pbf"
+
+DONG = DATA / "dong" / "dong_seoul.parquet"          # 서울 행정동 경계 + 인구
 
 # ---- 웹
 WEB_DATA = ROOT / "web" / "data"
