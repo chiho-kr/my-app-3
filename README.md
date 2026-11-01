@@ -1,6 +1,6 @@
 # 서울 심야 약국 접근성
 
-라이브: https://my-app-3.chiho-kang.workers.dev (지도) · https://my-app-3.chiho-kang.workers.dev/report.html (행정동 분석 보고서)
+라이브: https://my-app-3.chiho-kang.workers.dev (첫 화면은 시간 슬라이더 지도, 아래로 스크롤하면 행정동 분석 보고서. 보고서만: /report.html)
 
 평일 저녁 6시부터 다음 날 아침 6시까지, 서울 250m 격자마다 **지금 문 연 가장 가까운 약국까지 대중교통+도보로 몇 분**인지 10분 간격으로 계산하고, 1분 단위 슬라이더 지도(`web/`)로 보여준다.
 

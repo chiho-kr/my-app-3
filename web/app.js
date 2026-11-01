@@ -110,6 +110,13 @@
     container: "map",
     style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
     center: [126.985, 37.56], zoom: 10.4, minZoom: 9, maxZoom: 15,
+    // 지도 아래로 보고서가 이어지므로, 휠·한 손가락은 페이지 스크롤에 양보한다 (Ctrl+휠·두 손가락으로 지도 조작)
+    cooperativeGestures: true,
+    locale: {
+      "CooperativeGesturesHandler.WindowsHelpText": "Ctrl 키를 누른 채 스크롤하면 지도가 확대·축소됩니다",
+      "CooperativeGesturesHandler.MacHelpText": "⌘ 키를 누른 채 스크롤하면 지도가 확대·축소됩니다",
+      "CooperativeGesturesHandler.MobileHelpText": "두 손가락으로 지도를 움직이세요",
+    },
     attributionControl: { compact: true, customAttribution: "약국: E-Gen · 대중교통: KTDB GTFS · 경로: MOTIS" },
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");

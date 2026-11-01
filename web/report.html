@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>서울 심야 약국 접근성 보고서</title>
 <meta name="description" content="서울 427개 행정동의 평일 밤 18시~06시 약국 접근성: 밀도, 특화도, 중력 접근성, 심야 공백 시간">
+<script>
+// 지도 페이지(index.html) 아래에 iframe으로 들어갈 때: 위쪽 머리말을 숨기고, 지도 링크는 지도로 올라가게
+if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("embed");
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%230b1020%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%276%27 fill=%27%23ffc35a%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -117,6 +121,8 @@ select { font: inherit; font-size: 14px; padding: 6px 10px; border-radius: 8px; 
 .case .stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
 ul.tight { padding-left: 20px; } ul.tight li { margin: 4px 0; }
 .callout { border-left: 3px solid var(--warm); padding: 4px 0 4px 14px; margin: 18px 0; }
+.embed header.top, .embed footer { display: none; }
+.embed .hero { padding-top: 64px; }
 footer { margin: 80px 0 0; padding: 24px 0 48px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink3); }
 @media (max-width: 860px) {
   .kpis { grid-template-columns: 1fr 1fr; }
@@ -322,6 +328,13 @@ footer { margin: 80px 0 0; padding: 24px 0 48px; border-top: 1px solid var(--lin
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 <script>renderMathInElement(document.body, { delimiters: [{ left: "\\[", right: "\\]", display: true }, { left: "\\(", right: "\\)", display: false }], strict: false, throwOnError: false });</script>
-<script src="report.js?v=4"></script>
+<script src="report.js?v=5"></script>
+<script>
+if (document.documentElement.classList.contains("embed"))
+  for (const a of document.querySelectorAll('a[href="index.html"]')) {
+    a.textContent = a.textContent.replace(" 열기", "로 올라가기 ↑").replace("→", "↑");
+    a.addEventListener("click", (ev) => { ev.preventDefault(); parent.scrollTo({ top: 0, behavior: "smooth" }); });
+  }
+</script>
 </body>
 </html>
